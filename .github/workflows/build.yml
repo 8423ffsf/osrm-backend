@@ -69,4 +69,4 @@ jobs:
         path: |
           build/*.so
           build/osrm-*
-        retention-days: 7
+        retention-days: 14
