@@ -5,18 +5,16 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch: # 允许手动触发
+  workflow_dispatch: 
 
 jobs:
   build:
     runs-on: ubuntu-22.04
 
     steps:
-    # 1. 获取代码
+    
     - name: Checkout repository
       uses: actions/checkout@v4
-
-    # 2. 配置ccache缓存
     - name: Setup ccache
       uses: actions/cache@v4
       with:
@@ -25,43 +23,38 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-ccache-osrm-
 
-    # 3. 安装依赖 (关键：安装并切换至 GCC 12)
     - name: Install dependencies
       run: |
         sudo apt-get update
-        # 安装 GCC 12 并设置为默认编译器
         sudo apt-get install -y gcc-12 g++-12
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100
-        # 安装项目所需的其他库
         sudo apt-get install -y \
           build-essential git cmake pkg-config \
           libbz2-dev libxml2-dev libzip-dev libboost-all-dev \
           lua5.2 liblua5.2-dev libtbb-dev \
           ccache
 
-    # 4. 配置与编译 (核心修改：设置C++17标准并抑制GCC 12的严格警告)
     - name: Configure and Build
       env:
         CCACHE_DIR: ~/.ccache
       run: |
         mkdir -p build
         cd build
-        # 关键修改：通过 CMAKE_CXX_FLAGS 传递参数
         cmake .. \
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
           -DCMAKE_CXX_STANDARD=17 \
           -DCMAKE_CXX_FLAGS="-Wno-error=array-bounds -Wno-error=uninitialized -Wno-error=deprecated-declarations -Wno-stringop-overflow"
-        # 开始并行编译
+        
         cmake --build . -j4
 
-    # 5. 运行测试 (可选)
+    
     - name: Run Tests
       run: |
         cd build
         ctest --output-on-failure
 
-    # 6. 上传编译产物
+    
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
       with:
